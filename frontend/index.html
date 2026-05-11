@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>देवनागरी – Advanced Devanagari Character Recognition</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,500;0,9..40,700;1,9..40,400&family=Playfair+Display:wght@600;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- Grain overlay -->
+  <div class="grain"></div>
+
+  <!-- Theme toggle -->
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+    <span class="theme-icon sun">☀</span>
+    <span class="theme-icon moon">☽</span>
+  </button>
+
+  <!-- Toast container -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <div class="app-shell">
+    <!-- ─── HERO ────────────────────────────────────────── -->
+    <header class="hero">
+      <p class="hero-tag">Devanagari Character Deep Learning Recognition System</p>
+      <h1 class="hero-title">
+        <span class="deva-accent">देवनागरी</span> Character<br/>Recognition System
+      </h1>
+      <p class="hero-sub">
+        Upload, draw, or capture handwritten Devanagari characters.
+        Get instant predictions with Grad-CAM visualisation, confidence analysis, preprocessing pipeline, voice output, and educational metadata.
+        <strong>Now with Nepali currency note reading and multi-digit number recognition.</strong>
+      </p>
+      <div class="hero-badges">
+        <span class="badge" id="apiStatusBadge">
+          <span class="badge-dot"></span> Checking API…
+        </span>
+        <span class="badge badge-info">59 Classes</span>
+        <span class="badge badge-info">Advanced CNN</span>
+        <span class="badge badge-info" id="modelParamsBadge">–</span>
+        <span class="badge badge-info" id="noteModelBadge">Note Reader: –</span>
+      </div>
+    </header>
+
+    <!-- ─── DASHBOARD STATS ─────────────────────────────── -->
+    <section class="dashboard" id="dashboard">
+      <div class="stat-card">
+        <span class="stat-label">Total Predictions</span>
+        <span class="stat-value" id="statTotal">0</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Avg Confidence</span>
+        <span class="stat-value" id="statAvg">–</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Highest</span>
+        <span class="stat-value" id="statHigh">–</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Last Prediction</span>
+        <span class="stat-value" id="statLast">–</span>
+      </div>
+    </section>
+
+    <!-- ─── INPUT SECTION ───────────────────────────────── -->
+    <section class="input-section">
+      <h2 class="section-title">Input</h2>
+
+      <!-- Tab pills -->
+      <div class="tab-bar">
+        <button class="tab-pill active" data-tab="upload">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Upload
+        </button>
+        <button class="tab-pill" data-tab="draw">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/></svg>
+          Draw
+        </button>
+        <button class="tab-pill" data-tab="camera">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          Camera
+        </button>
+        <button class="tab-pill" data-tab="note">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><line x1="6" y1="12" x2="6" y2="12.01"/><line x1="18" y1="12" x2="18" y2="12.01"/><circle cx="12" cy="12" r="2"/></svg>
+          Note Reader
+        </button>
+      </div>
+
+      <!-- Upload panel -->
+      <div class="tab-panel active" id="panel-upload">
+        <!-- Upload mode selector -->
+        <div class="draw-mode-bar">
+          <button class="draw-mode-pill active" data-umode="single">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/></svg>
+            Single Character
+          </button>
+          <button class="draw-mode-pill" data-umode="multi">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="4" height="14" rx="1"/><rect x="10" y="5" width="4" height="14" rx="1"/><rect x="18" y="5" width="4" height="14" rx="1"/></svg>
+            Multi-Digit Number
+          </button>
+        </div>
+        <p class="draw-mode-hint hidden" id="uploadMultiHint">
+          Upload an image containing 2–8 Devanagari digits (e.g. <strong>१०</strong>, <strong>२५</strong>, <strong>१०८</strong>, <strong>२०२५</strong>).
+          Handwritten or printed numerals both work. Clear digit spacing improves accuracy.
+        </p>
+        <div class="drop-zone" id="dropZone">
+          <input type="file" id="fileInput" accept="image/*" hidden />
+          <div class="drop-inner">
+            <div class="drop-icon">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+            </div>
+            <p class="drop-text"><strong>Drag &amp; drop</strong> an image here</p>
+            <p class="drop-hint">or</p>
+            <button class="btn btn-secondary" id="browseBtn">Browse File</button>
+          </div>
+        </div>
+        <div class="upload-preview-wrap" id="uploadPreviewWrap">
+          <img id="uploadPreview" src="" alt="Preview" />
+        </div>
+      </div>
+
+      <!-- Draw panel -->
+      <div class="tab-panel" id="panel-draw">
+
+        <!-- Draw mode selector — only visible in the Draw tab -->
+        <div class="draw-mode-bar">
+          <button class="draw-mode-pill active" data-dmode="single">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/></svg>
+            Single Character
+          </button>
+          <button class="draw-mode-pill" data-dmode="multi">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="4" height="14" rx="1"/><rect x="10" y="5" width="4" height="14" rx="1"/><rect x="18" y="5" width="4" height="14" rx="1"/></svg>
+            Multi-Digit Number
+          </button>
+        </div>
+
+        <!-- Single character canvas (280×280) -->
+        <div class="canvas-wrap" id="singleCanvasWrap">
+          <canvas id="drawCanvas" width="280" height="280"></canvas>
+        </div>
+
+        <!-- Multi-digit canvas (560×200 — wider to fit multiple digits) -->
+        <div id="multiCanvasWrap" style="display:none">
+          <div class="canvas-wrap">
+            <canvas id="drawCanvasMulti" width="560" height="200"></canvas>
+          </div>
+          <p class="draw-mode-hint">
+            Write 2–8 Devanagari digits (e.g. <strong>१०</strong>, <strong>२५</strong>, <strong>१०८</strong>, <strong>२०२५</strong>).
+            Leave a small gap between each digit for best recognition.
+          </p>
+        </div>
+
+        <div class="canvas-controls">
+          <button class="btn btn-ghost btn-sm" id="clearCanvasBtn">Clear Canvas</button>
+          <label class="stroke-label">
+            Stroke
+            <input type="range" id="strokeSlider" min="8" max="28" value="18" />
+          </label>
+        </div>
+      </div>
+
+      <!-- Camera panel -->
+      <div class="tab-panel" id="panel-camera">
+        <!-- Camera mode selector -->
+        <div class="draw-mode-bar">
+          <button class="draw-mode-pill active" data-cmode="single">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/></svg>
+            Single Character
+          </button>
+          <button class="draw-mode-pill" data-cmode="multi">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="4" height="14" rx="1"/><rect x="10" y="5" width="4" height="14" rx="1"/><rect x="18" y="5" width="4" height="14" rx="1"/></svg>
+            Multi-Digit Number
+          </button>
+        </div>
+        <p class="draw-mode-hint hidden" id="cameraMultiHint">
+          Capture an image containing 2–8 Devanagari digits. Ensure good lighting and clear spacing between digits.
+        </p>
+        <div class="camera-wrap">
+          <div class="camera-container" id="cameraContainer">
+            <video id="cameraVideo" autoplay playsinline></video>
+            <canvas id="cameraSnap" width="280" height="280" style="display:none"></canvas>
+            <!-- guide overlay: shown when camera is running -->
+            <div class="camera-guide-frame hidden" id="cameraGuideFrame">
+              <span class="camera-guide-label">Place character here</span>
+            </div>
+          </div>
+        </div>
+        <div class="camera-controls">
+          <button class="btn btn-secondary" id="startCameraBtn">Start Camera</button>
+          <button class="btn btn-primary" id="captureBtn" disabled>Capture</button>
+          <button class="btn btn-ghost btn-sm" id="stopCameraBtn" disabled>Stop</button>
+        </div>
+        <div class="upload-preview-wrap" id="cameraPreviewWrap">
+          <img id="cameraPreview" src="" alt="Camera capture" />
+        </div>
+      </div>
+
+      <!-- Note Reader panel -->
+      <div class="tab-panel" id="panel-note">
+        <div class="drop-zone" id="noteDropZone">
+          <input type="file" id="noteFileInput" accept="image/*" hidden />
+          <div class="drop-inner">
+            <div class="drop-icon">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/></svg>
+            </div>
+            <p class="drop-text"><strong>Upload Nepali currency note</strong> image</p>
+            <p class="drop-hint">Supports Rs. 5, 10, 20, 50, 100, 500, 1000</p>
+            <button class="btn btn-secondary" id="noteBrowseBtn">Browse Note Image</button>
+          </div>
+        </div>
+        <div class="upload-preview-wrap" id="notePreviewWrap">
+          <img id="notePreview" src="" alt="Note preview" />
+        </div>
+        <p class="note-camera-hint">Or capture a note image using the Camera tab, then switch back here.</p>
+      </div>
+
+      <!-- Action buttons -->
+      <div class="action-row">
+        <button class="btn btn-primary btn-lg" id="predictBtn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10"/></svg>
+          Predict
+        </button>
+        <button class="btn btn-ghost" id="resetBtn">Reset</button>
+        <button class="btn btn-ghost" id="sampleBtn">Try Sample</button>
+      </div>
+    </section>
+
+    <!-- ─── LOADING ─────────────────────────────────────── -->
+    <div id="loadingOverlay" class="loading-overlay hidden">
+      <div class="loader-ring"></div>
+      <span id="loadingText">Analyzing…</span>
+    </div>
+
+    <!-- ─── RESULTS SECTION (Character) ─────────────────── -->
+    <section class="results-section hidden" id="resultsSection">
+      <h2 class="section-title">Prediction Results</h2>
+
+      <!-- Low confidence warning -->
+      <div class="warning-bar hidden" id="lowConfWarn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span id="lowConfText">Low confidence – try a clearer image.</span>
+      </div>
+
+      <!-- Main result card -->
+      <div class="result-hero" id="resultHero">
+        <div class="result-char" id="resChar">–</div>
+        <div class="result-details">
+          <div class="result-row"><span class="result-key">Transliteration</span><span class="result-val" id="resRoman">–</span></div>
+          <div class="result-row"><span class="result-key">Nepali Name</span><span class="result-val" id="resNepali">–</span></div>
+          <div class="result-row"><span class="result-key">Type</span><span class="result-val tag" id="resType">–</span></div>
+          <div class="result-row"><span class="result-key">Confidence</span><span class="result-val" id="resConf">–</span></div>
+          <div class="conf-bar-wrap"><div class="conf-bar" id="resConfBar"></div></div>
+          <div class="result-row"><span class="result-key">Example Word</span><span class="result-val" id="resWord">–</span></div>
+          <div class="result-note" id="resNote"></div>
+        </div>
+      </div>
+
+      <!-- Voice output + Feedback buttons -->
+      <div class="action-row result-actions">
+        <button class="btn btn-secondary btn-sm" id="voiceBtn" title="Listen to pronunciation">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 010 14.14"/><path d="M15.54 8.46a5 5 0 010 7.07"/></svg>
+          Listen
+        </button>
+        <button class="btn btn-ghost btn-sm" id="feedbackCorrectBtn" title="Mark as correct">✓ Correct</button>
+        <button class="btn btn-ghost btn-sm" id="feedbackWrongBtn" title="Mark as wrong">✗ Wrong</button>
+      </div>
+
+      <!-- Uncertainty analysis -->
+      <div class="analysis-bar" id="analysisBar">
+        <span class="analysis-item">Uncertainty: <strong id="resUncertainty">–</strong></span>
+        <span class="analysis-item">Entropy: <strong id="resEntropy">–</strong></span>
+        <span class="analysis-item">Inverted: <strong id="resInverted">–</strong></span>
+      </div>
+
+      <!-- Confusion hints -->
+      <div class="confusion-box hidden" id="confusionBox">
+        <p class="confusion-label">May also resemble:</p>
+        <div class="confusion-chips" id="confusionChips"></div>
+      </div>
+
+      <!-- Top-3 predictions -->
+      <h3 class="sub-title">Top 3 Predictions</h3>
+      <div class="top3-grid" id="top3Grid"></div>
+
+      <!-- Top-5 predictions (expandable) -->
+      <details class="top5-details">
+        <summary class="sub-title clickable">Top 5 Predictions ▸</summary>
+        <div class="top5-grid" id="top5Grid"></div>
+      </details>
+
+      <!-- Grad-CAM Heatmap -->
+      <div class="gradcam-section" id="gradcamSection">
+        <h3 class="sub-title">Grad-CAM Attention Heatmap</h3>
+        <p class="gradcam-desc">Shows which regions of the input the model focuses on for its prediction.</p>
+        <div class="gradcam-wrap">
+          <div class="pp-card"><img id="gradcamImg" src="" alt="Grad-CAM"/><span>Grad-CAM Overlay</span></div>
+          <div class="pp-card"><img id="ppModel2" src="" alt="Model Input"/><span>Model Input</span></div>
+        </div>
+      </div>
+
+      <!-- Preprocessing previews -->
+      <h3 class="sub-title">Preprocessing Pipeline</h3>
+      <div class="preprocess-grid" id="preprocessGrid">
+        <div class="pp-card"><img id="ppOriginal" src="" alt="Original"/><span>Original</span></div>
+        <div class="pp-card"><img id="ppGray" src="" alt="Grayscale"/><span>Grayscale</span></div>
+        <div class="pp-card"><img id="ppProcessed" src="" alt="Processed"/><span>Thresholded</span></div>
+        <div class="pp-card"><img id="ppModel" src="" alt="Model Input"/><span>32×32 Input</span></div>
+      </div>
+    </section>
+
+    <!-- ─── NOTE RESULTS SECTION ────────────────────────── -->
+    <section class="results-section hidden" id="noteResultsSection">
+      <h2 class="section-title">💵 Note Reading Result</h2>
+
+      <!-- Not recognized warning -->
+      <div class="warning-bar hidden" id="noteNotRecognizedWarn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span id="noteNotRecognizedText">This note could not be recognized. It may be outside the trained dataset or the image is unclear.</span>
+      </div>
+
+      <!-- Note result card -->
+      <div class="result-hero note-result-hero" id="noteResultHero">
+        <div class="note-result-value" id="noteResValue">–</div>
+        <div class="result-details">
+          <div class="result-row"><span class="result-key">Denomination</span><span class="result-val" id="noteResEnglish">–</span></div>
+          <div class="result-row"><span class="result-key">नेपालीमा</span><span class="result-val" id="noteResNepali">–</span></div>
+          <div class="result-row"><span class="result-key">नेपाली अंक</span><span class="result-val" id="noteResNepaliNum">–</span></div>
+          <div class="result-row"><span class="result-key">Color</span><span class="result-val" id="noteResColor">–</span></div>
+          <div class="result-row"><span class="result-key">Confidence</span><span class="result-val" id="noteResConf">–</span></div>
+          <div class="conf-bar-wrap"><div class="conf-bar" id="noteResConfBar"></div></div>
+          <div class="result-row"><span class="result-key">Method</span><span class="result-val" id="noteMethodBadge">–</span></div>
+        </div>
+      </div>
+
+      <!-- Voice mode selector + buttons -->
+      <div class="voice-controls">
+        <div class="voice-mode-pills">
+          <span class="voice-mode-label">Voice mode:</span>
+          <button class="voice-pill active" data-vmode="english">English</button>
+          <button class="voice-pill" data-vmode="nepali">नेपाली</button>
+          <button class="voice-pill" data-vmode="mixed">Mixed</button>
+          <button class="voice-pill" data-vmode="confidence">Confidence</button>
+        </div>
+        <div class="voice-selector-wrap">
+          <label class="voice-selector-label" for="voiceSelector">Voice:</label>
+          <select id="voiceSelector" class="voice-select">
+            <option value="">Default Voice</option>
+          </select>
+        </div>
+        <div class="action-row result-actions">
+          <button class="btn btn-secondary btn-sm" id="noteVoiceBtn" title="Listen to denomination">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 010 14.14"/><path d="M15.54 8.46a5 5 0 010 7.07"/></svg>
+            Listen
+          </button>
+          <button class="btn btn-ghost btn-sm" id="noteReplayBtn" title="Replay last voice">🔁 Replay</button>
+        </div>
+      </div>
+
+      <!-- Top-3 note predictions -->
+      <h3 class="sub-title">Top 3 Denomination Predictions</h3>
+      <div class="top3-grid" id="noteTop3Grid"></div>
+    </section>
+
+    <!-- ─── MULTI-DIGIT RESULTS SECTION ──────────────────── -->
+    <section class="results-section hidden" id="multidigitResultsSection">
+      <h2 class="section-title">🔢 Multi-Digit Recognition</h2>
+
+      <!-- Confidence / error warning -->
+      <div class="warning-bar hidden" id="multidigitWarnBar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span id="multidigitWarnText">Low confidence – try drawing with bolder, clearer strokes.</span>
+      </div>
+
+      <!-- Main result card -->
+      <div class="result-hero" id="multidigitResultHero">
+        <div class="multidigit-result-number">
+          <span id="multidigitResDeva">–</span>
+          <small id="multidigitResArabic"></small>
+        </div>
+        <div class="result-details">
+          <div class="result-row"><span class="result-key">Digits Found</span><span class="result-val" id="multidigitResCount">–</span></div>
+          <div class="result-row"><span class="result-key">Overall Confidence</span><span class="result-val" id="multidigitResConf">–</span></div>
+          <div class="conf-bar-wrap"><div class="conf-bar" id="multidigitResConfBar"></div></div>
+        </div>
+      </div>
+
+      <!-- Per-segment warnings (e.g. "Digit 3 had low confidence") -->
+      <div class="multidigit-warnings-box hidden" id="multidigitWarningsBox"></div>
+
+      <!-- Segmentation preview -->
+      <h3 class="sub-title">Digit Segmentation</h3>
+      <div class="multidigit-seg-wrap">
+        <img id="multidigitSegImg" class="multidigit-seg-img" src="" alt="Segmentation" style="display:none" />
+        <p class="multidigit-seg-label">Detected digit regions shown with coloured bounding boxes</p>
+      </div>
+
+      <!-- Per-digit breakdown -->
+      <h3 class="sub-title">Per-Digit Breakdown</h3>
+      <div class="multidigit-digits-grid" id="multidigitDigitsGrid"></div>
+    </section>
+
+    <!-- ─── TRAINING METRICS ────────────────────────────── -->
+    <section class="metrics-section">
+      <h2 class="section-title">Training &amp; Evaluation Metrics</h2>
+
+      <!-- Evaluation summary cards -->
+      <div class="eval-cards" id="evalCards">
+        <div class="eval-card">
+          <span class="eval-label">Accuracy</span>
+          <span class="eval-value" id="evalAccuracy">–</span>
+        </div>
+        <div class="eval-card">
+          <span class="eval-label">Precision</span>
+          <span class="eval-value" id="evalPrecision">–</span>
+        </div>
+        <div class="eval-card">
+          <span class="eval-label">Recall</span>
+          <span class="eval-value" id="evalRecall">–</span>
+        </div>
+        <div class="eval-card">
+          <span class="eval-label">F1-Score</span>
+          <span class="eval-value" id="evalF1">–</span>
+        </div>
+      </div>
+
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <h4>Accuracy &amp; Loss</h4>
+          <img id="trainingPlotImg" class="metric-img" alt="Training plot" />
+        </div>
+        <div class="metric-card">
+          <h4>Confusion Matrix</h4>
+          <img id="confMatImg" class="metric-img" alt="Confusion matrix" />
+        </div>
+      </div>
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <h4>Per-Class Accuracy</h4>
+          <img id="perClassAccImg" class="metric-img" alt="Per-class accuracy" />
+        </div>
+        <div class="metric-card">
+          <h4>Learning Rate Schedule</h4>
+          <img id="lrScheduleImg" class="metric-img" alt="Learning rate schedule" />
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── CONFIDENCE TREND ──────────────────────────────── -->
+    <section class="chart-section" id="chartSection">
+      <h2 class="section-title">Confidence Trend</h2>
+      <canvas id="confTrendCanvas" width="700" height="200"></canvas>
+    </section>
+
+    <!-- ─── HISTORY ─────────────────────────────────────── -->
+    <section class="history-section">
+      <div class="history-header">
+        <h2 class="section-title">Prediction History</h2>
+        <div class="history-actions">
+          <button class="btn btn-ghost btn-sm" id="exportCsvBtn">Export CSV</button>
+          <button class="btn btn-ghost btn-sm" id="clearHistBtn">Clear</button>
+        </div>
+      </div>
+      <div class="history-list" id="historyList">
+        <p class="history-empty" id="historyEmpty">No predictions yet.</p>
+      </div>
+    </section>
+
+    <!-- ─── FOOTER ──────────────────────────────────────── -->
+    <footer class="app-footer">
+      <p>Deep Learning Based Handwritten Devanagari Character Recognition &middot; Advanced CNN &middot; Grad-CAM &middot; Note Reader &middot; Multi-Digit Recognition &middot; Built with FastAPI + Vanilla JS</p>
+    </footer>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

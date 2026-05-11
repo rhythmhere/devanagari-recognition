@@ -1,0 +1,11 @@
+# Ignore dataset folders
+data/
+backend/saved_model/
+backend/__pycache__/
+ml/__pycache__/
+
+# Ignore log files
+*.log
+
+# Optional: Ignore any compiled Python files
+*.pyc
